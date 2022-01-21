@@ -1,27 +1,5 @@
-from functools import wraps
 from collections import deque
 import sys
-
-
-def memoize(function):
-    memo = {}
-    @wraps(function)
-    def wrapper(*args):
-        try:
-            return memo[args]
-        except KeyError:
-            rv = function(*args)
-            memo[args] = rv
-            return rv
-    return wrapper
-
-
-@memoize
-def fibonacci(n):
-    if n < 2: return n
-    return fibonacci(n - 1) + fibonacci(n - 2)
-
-print(fibonacci(25))
 
 
 class Node:
@@ -29,16 +7,22 @@ class Node:
         self.index = i
         self.word = w
         self.visited = False
-        self.distance
-        self.next_node
+        self.distance = 100000
+        self.next_node = None
 
 
 def main():
-    global dictionary
+    global dictionary, nodes, end
 
-    str_start = sys.argv[0]
-    str_end = sys.argv[1]
-    print(start, end)
+    try:
+        str_start = sys.argv[1]
+
+        str_end = sys.argv[2]
+    except:
+        print("please give two words to join in args")
+        exit(1)
+
+    print(str_start, str_end)
 
     dictionary = []
     nodes = []
@@ -58,11 +42,14 @@ def main():
     single_len = dfs(start, end, True)
     double_len = dfs(start, end, False)
 
-    print(single_len[0], (dictionary[i] for i in single_len[1:] if not single_len == 0))
-    print(double_len[0], (dictionary[i] for i in double_len[1:] if not double_len == 0))
+    print(single_len)
+
+    print(single_len[0], (word for word in single_len[1:] if not single_len == 0))
+    print(double_len[0], (word for word in double_len[1:] if not double_len == 0))
+    exit(0)
 
 
-def dfs(Node start, Node end, bool single):
+def dfs(start, end, single):
     global dictionary, stack
 
     start.distance = 0
@@ -72,31 +59,34 @@ def dfs(Node start, Node end, bool single):
         out = queue_neighbours(single)
         if type(out) == list:
             return out
+
     return [0]
 
 
-def queue_neighbours(bool single):
+def queue_neighbours(single):
     left = stack.popleft()
-    match_len = len(left.word)/2 + len(left.word) % 2
+    match_len = int(len(left.word)/2) + len(left.word) % 2
+    print(left.word)
+    print(match_len)
 
     for right in nodes :
         if(right.visited):
             continue
 
         #check how big the matching string must be
-        match_len2 = len(word)/2 + len(word) % 2
+        match_len2 = int(len(right.word)/2) + len(right.word) % 2
         if(single):
-            match_len = min(match_len, match_len2)
+            match = min(match_len, match_len2)
         else:
-            match_len = max(match_len, match_len2)
+            match = max(match_len, match_len2)
 
         #check if suffix matches prefix of next word
-        if(left.word[-match_len:] == word[:match_len]):
+        if(left.word[-match:] == right.word[0:match]):
             
             #check if we reached the end word
             if(right == end):
-                out = [left.distance + 1, right]
-                for i in range(left.distance):
+                out = [left.distance + 1, right.word]
+                for i in range(left.distance + 1):
                     out.insert(1, left.word)
                     left = left.next_node
                 return out
