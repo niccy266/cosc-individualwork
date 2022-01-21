@@ -1,0 +1,1 @@
+egrep -o '[^ ]{4,}' /usr/share/dict/words | python joinedup/joined.py suffix read
