@@ -1,0 +1,23 @@
+# Lines beginning with # are also bad, but are mostly intended
+# as comments to explain the preceding line.
+I am a very bad coordinate
+50 S, 40 S
+50 E, 40 E
+50 south 40 east
+# Directions not to be written out
+100 0
+# Latitudes to be in range -90 to 90 inclusive. Note, not -90.1
+# Latitude - longitude order is assumed even when it could give
+# a valid interpretation the other way around
+-100 0
+-50 S, 40 E 
+# No signs if direction given
+30 -270 
+# Longitudes to be given in range -180 to 180
+23 D 45 M 2 S N, 15 d 20 m 3 s S 
+# No caps allowed in dms
+50 S, 40 EA wonderful, wonderful, wonderful place
+# Must be a space before the label
+50 S 40  
+# If one direction is given both must be
+50 S -40
