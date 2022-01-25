@@ -1,0 +1,11 @@
+50 S, 40 E
+40 E, 50 S
+40 E 50 S
+50 S 40 E
++50 -40
+30 155
+23 d 45 m 2 s N, 15 d 20 m 3 s W
+50°00'00.0"N, 50°00'00.0"E
+50° 00' 00.0" N, 50° 00' 00.0" E
+50 S, 40 E A wonderful, wonderful, wonderful place
+
