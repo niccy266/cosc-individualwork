@@ -252,12 +252,7 @@ public class NicoGeoInput2 {
                         coord = NONE;
                         axis = NONE;
                         sign = 1;
-
-                    } else {
-                        // no axis given now but next token might be a cardinal letter
-                    }
-                } else {
-
+                    } // else no axis given now but next token could be a cardinal letter
                 }
             }
         }
