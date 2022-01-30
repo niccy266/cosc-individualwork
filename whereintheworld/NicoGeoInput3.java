@@ -4,21 +4,12 @@ import java.lang.Character.Subset;
 import java.util.*;
 //import org.apache.commons.lang3.ArrayUtils;
 
-public class NicoGeoInput2 {
+public class NicoGeoInput3 {
 
     public static final String dg = "\u00B0";
     public static final int NONE = -1;
     public static final int LAT = 0;
     public static final int LON = 1;
-    public static final int POS = 1;
-    public static final int NEG = -1;
-    public static float coord = NONE;
-    public static boolean signed = false;
-    public static boolean cardinal = false;
-    public static int axis = NONE;
-    public static int sign = POS;
-    public static float[] coords;
-    public static String t; // current token being processed
 
     /*
      * Rules:
@@ -54,63 +45,8 @@ public class NicoGeoInput2 {
         return Character.toString(c).matches("(.*)[NSEW](.*)");
     }
 
-    public static boolean checkCardinal() {
-        char c = t.charAt(t.length());
-        if (isCardinal(c)) {
-            if (signed) {
-                return false; // used +/- as well as cardinal letters
-            }
-            cardinal = true;
-
-            // if a direction is already staged
-            if (axis != NONE) {
-                return false; // two directions given before a value
-            }
-
-            // stage the direction
-            sign = cardToCoord(c);
-            axis = latOrLon(c);
-
-            // checks if the staged axis already has a value
-            if (coords[axis] != NONE) {
-                return false; // given two values for the same axis
-            }
-
-            // if a value is ready to be assigned to an axis
-            if (coord != NONE) {
-                // store the staged value and direction
-                coords[axis] = sign * coord;
-
-                // clear stage for next coordinate and direction
-                coord = NONE;
-                axis = NONE;
-                sign = POS;
-            }
-
-            // remove the cardinal letter
-            t = t.substring(0, t.length());
-        }
-        return true;
-    }
-
     public static boolean isSigned(char c) {
         return Character.toString(c).substring(0, 1).matches("[+-]");
-    }
-
-    public static boolean checkSign() {
-        char s = t.charAt(0);
-        if (isSigned(s)) {
-            if (cardinal) {
-                return false; // used +/- as well as cardinal letters
-            }
-            signed = true;
-
-            if (s == '-') {
-                sign = NEG;
-            }
-            t = t.substring(1); // remove sign so the number can be parsed
-        }
-        return true;
     }
 
     public static void parse(String line, int count) {
@@ -122,10 +58,10 @@ public class NicoGeoInput2 {
         }
 
         if (validDegreesFormat(line)) {
-            tryParse(DEGREE);
+            tryParseDegree(line, count);
             return;
         } else if (validDecimalFormat(line)) {
-            tryParse(DECIMAL);
+            tryParseDecimal(line, count);
             return;
         } else {
             return; // unrecognized format // broke rule 6
@@ -173,6 +109,15 @@ public class NicoGeoInput2 {
         return c == 'N' || c == 'S' ? LAT : LON;
     }
 
+    public static boolean containsCardinal(String c) {
+        return c.matches("[+-]?[0-9]*\s?[NSEW](.*)");
+    }
+
+    public static boolean containsSign(String line) {
+        return isSigned(line.charAt(0)) ||
+                isSigned(line.replace("^[+-]?[0-9]*[NSWE]?,?\s?", "").charAt(0));
+    }
+
     // public static String coordToStr(float n) {
     // String num = Integer.toString(Math.round(n*1000000));
     // int decPoint = num.length() - 6
@@ -191,67 +136,55 @@ public class NicoGeoInput2 {
      */
     public static void tryParseDecimal(String line, int count) {
         Scanner sc = new Scanner(line);
-        signed = false;
-        cardinal = false;
-        coord = NONE;
-        axis = NONE;
-        sign = POS;
-        coords = new float[] { NONE, NONE };
+        String t;
+        boolean signed = false;
+        boolean cardinal = false;
+        boolean spaceBetweenCardinal = false;
+        int axis = NONE;
+        float coord = NONE;
+        float[] coords = { NONE, NONE };
+        int sign = 1;
 
-        while (sc.hasNext()) {
+        signed = containsSign(line);
+        cardinal = containsCardinal(line);
 
-            t = sc.next();
-            removeComma(t);
+        if (signed && cardinal)
+            return;
+        spaceBetweenCardinal = cardinal &&
 
-            if (!checkSign()) {
-                sc.close();
-                return;
-            }
-            if (!checkCardinal()) {
-                sc.close();
-                return;
-            }
-
-            if (coords[LAT] != NONE && coords[LON] != NONE) {
-                // break from loop if we have a coordinate for both axes
-                break;
-            }
-
-            parseDecimal();
-        }
-
-        sc.close();
-
-        store(coords, sc.nextLine());
+                store(coords, sc.nextLine());
         return;
     }
 
-    public static boolean parseDecimal() {
-        if (isNum(t)) {
-            // if another value is already staged but not saved
-            if (coord != NONE) {
-                coords[LAT] = coord;
-                coords[LON] = Float.parseFloat(t);
-                return true;
-            }
+    public static int findLengthDegree(String[] t) {
 
-            // otherwise stage the next value
-            coord = sign * Float.parseFloat(t);
+        return 1;
+    }
 
-            if (cardinal) {
-                // if there was a cardinal letter adjacent to the number
-                if (axis != NONE) {
-                    coords[axis] = sign * coord;
+    public static String stripToNum(String coord) {
+        return coord.replace("[^[.][0-9]]", "");
+    }
 
-                    // ready for next coordinate
-                    coord = NONE;
-                    axis = NONE;
-                    sign = POS;
-                } // else no axis given now but next token could be a cardinal letter
-            }
-            return true;
+    public static int[] parseSimple(String lat, String lon) {
+        int lat_i = parseSimple(lat);
+        int lon_i = parseSimple(lon);
+        return new int[] { lat_i, lon_i };
+    }
+
+    public static int parseSimple(String c) {
+        // storing coordinates at 10^6 times their value so they can be stored as ints
+        int n = (int) (Float.parseFloat(stripToNum(c)) * 1000000);
+
+        if (c.substring(c.length() - 1).matches("[SW]")) {
+            n *= -1;
+        } else if (c.charAt(0) == '-') {
+            n *= -1;
         }
-        return false;
+        return n;
+    }
+
+    public static boolean parseDegrees(String c) {
+        return c.matches("[+-]?[0-9](.*)");
     }
 
     public static byte validDegreesLatitude(String c) {
@@ -319,37 +252,116 @@ public class NicoGeoInput2 {
      * @param line  the line of input to parse in decimal format
      * @param count number of input line in system.in for reporting bad data
      */
-    public static void parseDegree(String line, int count) {
-        // if the imput matches the decimal format, it should be
-        // stripped to just the number by this point
-        if (isNum(t)) {
-            // if another value is already staged but not saved
-            if (coord != NONE) {
-                coords[LAT] = coord;
-                coords[LON] = Float.parseFloat(t);
-                // now we have both coords so exit the loop
-                break;
+    public static void tryParseDegree(String line, int count) {
+        Scanner sc = new Scanner(line);
+
+        // int i = 0;
+        String t;
+        boolean signed = false;
+        boolean cardinal = false;
+
+        int axis = NONE;
+        float coord = NONE;
+
+        float[] coords = { NONE, NONE };
+
+        float d = 0;
+        int m = 0;
+        float s = 0;
+
+        while (sc.hasNext()) {
+            int sign = 1;
+
+            t = sc.next();
+            removeComma(t);
+
+            // check if token starts with a + or - sign
+            char s = t.charAt(0);
+            if (isSigned(s)) {
+                if (cardinal)
+                    return; // used +/- as well as cardinal letters
+                signed = true;
+
+                if (s == '-') {
+                    sign = -1;
+                }
+                t = t.substring(1); // remove sign so the number can be parsed
             }
 
-            // otherwise stage the next value
-            coord = sign * Float.parseFloat(t);
+            // check if number ends with a cardinal direction
+            char c = t.charAt(t.length());
+            if (isCardinal(c)) {
+                if (signed)
+                    return; // used +/- as well as cardinal letters
+                cardinal = true;
 
-            if (cardinal) {
-                // if there was a cardinal letter adjacent to the number
+                // if a direction is already staged
                 if (axis != NONE) {
+                    return; // two directions given before a value
+                }
+
+                // stage the direction
+                sign = cardToCoord(c);
+                axis = latOrLon(c);
+
+                // checks if the staged axis already has a value
+                if (coords[axis] != NONE) {
+                    return; // given two values for the same axis
+                }
+
+                // if a value is ready to be assigned to an axis
+                if (coord != NONE) {
+                    // store the staged value and direction
                     coords[axis] = sign * coord;
+                    // break from loop if we have a coordinate for both axes
                     if (coords[1 - axis] != NONE) {
-                        // break from loop if we have a coordinate for both axes
                         break;
                     }
 
-                    // ready for next coordinate
+                    // clear stage for next coordinate and direction
                     coord = NONE;
                     axis = NONE;
                     sign = 1;
-                } // else no axis given now but next token could be a cardinal letter
+                }
+
+                // remove the cardinal letter
+                t = t.substring(0, t.length());
+            }
+
+            // if the imput matches the decimal format, it should be
+            // stripped to just the number by this point
+            if (isNum(t)) {
+                // if another value is already staged but not saved
+                if (coord != NONE) {
+                    coords[LAT] = coord;
+                    coords[LON] = Float.parseFloat(t);
+                    // now we have both coords so exit the loop
+                    break;
+                }
+
+                // otherwise stage the next value
+                coord = sign * Float.parseFloat(t);
+
+                if (cardinal) {
+                    // if there was a cardinal letter adjacent to the number
+                    if (axis != NONE) {
+                        coords[axis] = sign * coord;
+                        if (coords[1 - axis] != NONE) {
+                            // break from loop if we have a coordinate for both axes
+                            break;
+                        }
+
+                        // ready for next coordinate
+                        coord = NONE;
+                        axis = NONE;
+                        sign = 1;
+                    } // else no axis given now but next token could be a cardinal letter
+                }
             }
         }
+
+        store(coords, sc.nextLine());
+        return;
     }
 
     public static byte validDecimalLatitude(String c) {
