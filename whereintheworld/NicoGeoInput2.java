@@ -341,6 +341,130 @@ public class NicoGeoInput2 {
         return c.split("[\u00B0\'\"]");
     }
 
+    // public static String coordToStr(float n) {
+    // String num = Integer.toString(Math.round(n*1000000));
+    // int decPoint = num.length() - 6
+    // return num.substring(0, decPoint) + "." + num.substring(decPoint);
+    // }
+
+    /**
+     * Tries to parse a line of input as coordinates in decimal format.
+     * Tries to match input with decimal format coordinates, eg, 80, 170.
+     * Returns if the the requirements for the format ever aren't met.
+     * If the data is parsed succesfully, the coordinates and label
+     * are passed to the output file using store()
+     * 
+     * @param line  the line of input to parse in decimal format
+     * @param count number of input line in system.in for reporting bad data
+     */
+    public static void tryParseDegree(String line, int count) {
+        Scanner sc = new Scanner(line);
+
+        // int i = 0;
+        String t;
+        boolean signed = false;
+        boolean cardinal = false;
+
+        int axis = NONE;
+        float coord = NONE;
+
+        float[] coords = { NONE, NONE };
+
+        while (sc.hasNext()) {
+            int sign = 1;
+
+            t = sc.next();
+            removeComma(t);
+
+            // check if token starts with a + or - sign
+            char s = t.charAt(0);
+            if (isSigned(s)) {
+                if (cardinal)
+                    return; // used +/- as well as cardinal letters
+                signed = true;
+
+                if (s == '-') {
+                    sign = -1;
+                }
+                t = t.substring(1); // remove sign so the number can be parsed
+            }
+
+            // check if number ends with a cardinal direction
+            char c = t.charAt(t.length());
+            if (isCardinal(c)) {
+                if (signed)
+                    return; // used +/- as well as cardinal letters
+                cardinal = true;
+
+                // if a direction is already staged
+                if (axis != NONE) {
+                    return; // two directions given before a value
+                }
+
+                // stage the direction
+                sign = cardToCoord(c);
+                axis = latOrLon(c);
+
+                // checks if the staged axis already has a value
+                if (coords[axis] != NONE) {
+                    return; // given two values for the same axis
+                }
+
+                // if a value is ready to be assigned to an axis
+                if (coord != NONE) {
+                    // store the staged value and direction
+                    coords[axis] = sign * coord;
+                    // break from loop if we have a coordinate for both axes
+                    if (coords[1 - axis] != NONE) {
+                        break;
+                    }
+
+                    // clear stage for next coordinate and direction
+                    coord = NONE;
+                    axis = NONE;
+                    sign = 1;
+                }
+
+                // remove the cardinal letter
+                t = t.substring(0, t.length());
+            }
+
+            // if the imput matches the decimal format, it should be
+            // stripped to just the number by this point
+            if (isNum(t)) {
+                // if another value is already staged but not saved
+                if (coord != NONE) {
+                    coords[LAT] = coord;
+                    coords[LON] = Float.parseFloat(t);
+                    // now we have both coords so exit the loop
+                    break;
+                }
+
+                // otherwise stage the next value
+                coord = sign * Float.parseFloat(t);
+
+                if (cardinal) {
+                    // if there was a cardinal letter adjacent to the number
+                    if (axis != NONE) {
+                        coords[axis] = sign * coord;
+                        if (coords[1 - axis] != NONE) {
+                            // break from loop if we have a coordinate for both axes
+                            break;
+                        }
+
+                        // ready for next coordinate
+                        coord = NONE;
+                        axis = NONE;
+                        sign = 1;
+                    } // else no axis given now but next token could be a cardinal letter
+                }
+            }
+        }
+
+        store(coords, sc.nextLine());
+        return;
+    }
+
     public static byte validDecimalLatitude(String c) {
         // this code reduces token to the absolute value of latitude
         if (c.substring(0, 1).matches("[+-]")) {
