@@ -116,6 +116,18 @@ def b_func(b, c):
     pass
 
 
+
+def hasRepeats(num):
+    encountered = []
+    for d in num:
+        if d in encountered:
+            return True
+        else:
+            encountered.append(d)
+    return False
+
+
+
 # found this code at https://stackoverflow.com/questions/2267362/how-to-convert-an-integer-to-a-string-in-any-base
 def numberToBase(b, n):
     if n == 0:
