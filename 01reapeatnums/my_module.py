@@ -6,7 +6,9 @@
 # adding to this number will increase at least one of
 # the digits by 1 and that will cause a repeated number
 
+from email.mime import base
 import sys
+from syslog import LOG_LOCAL1
 
 def main():
     for line in sys.stdin :
@@ -30,21 +32,42 @@ def main():
 def a_func(b, n):
     if b == 1: 
         return 1 # in base 1 all numbers past 1 have repeats
-    digits = numberToBase(b, n)
-    if len(digits) > b : 
-        # if input number was bigger than largest num without repeats,
-        # set it to that number
-        digits = [b - n for n in range(1, b + 1)]
-    if n < 1000000 : # brute force for small searches
-        start = 1
-    elif digits[0] > 1 or digits[1] >= 1 and digits[2] >=5:
-        start = [1, 0, b - n for n in range(1, len(digits) - 1)]
-    else:
-        start = 0
-        for i, d in  enumerate(range(1, len(digits))):
-            start = b ^ (len(digits)-i) * d 
 
-    longest = a_search(digits, b, start)
+    upper = [b - n for n in range(1, b + 1)]
+    upper_decimal = baseToDecimal(b, upper)
+    if n > upper_decimal * (1 + 1/b): 
+        # if input number was bigger than largest num without repeats
+        # by a large margin, then that number is the start of
+        # an infinite set of numbers with repeats
+        return upper_decimal
+
+    
+    if n < 1000000 : # brute force for small searches
+        return a_search(n, b, n / b)
+
+    digits = numberToBase(b, n)
+
+    if digits[0] > 1 or digits[1] >= 1 and digits[2] >=5:
+        start = [1, 0, b - n for n in range(1, len(digits) - 1)] # search from like 109876543
+        start = baseToDecimal(start)
+        end = [1, 2, b - n for n in range(1, len(digits) - 1)] # to like 129876543
+        print(digits, end)
+        end = baseToDecimal(end)
+        if end > n : 
+            end = n
+        
+        long, long_l = a_search(b, start, end)
+
+    elif(digits[0:2] == [1, 0, 0]): # max is barely over an order of magnitude, eg 100010 
+        start = [1, 0, b - n for n in range(1, len(digits) - 2)]     # start around 10900 
+        run,  a_search(b, n, baseToDecimal(start))
+
+    else:                   # max is up to 109000
+        start = [b - n for n in range(1, len(digits))] #  98765
+        return a_search(b, n, baseToDecimal(start))
+
+
+    longest = a_search(n, b, start)
     print(longest)
 
 
@@ -69,8 +92,24 @@ def a_func(b, n):
 """
 
 
-def a_search(b, n, s):
-    while 
+def a_search(b, s, e):
+    curr = s # record where run started
+    long = curr
+    long_l = 0
+    while s < e:
+        num = numberToBase(b, s)
+        encountered = []
+        for d in num:
+            if d in encountered:
+                curr_l = s - curr
+                if curr_l > long_l:
+                    long = curr
+                curr = s + 1
+                break
+            else:
+                encountered.append(d)
+    return long, long_l
+
 
 
 def b_func(b, c):
@@ -86,6 +125,14 @@ def numberToBase(b, n):
         digits.append(int(n % b))
         n //= b
     return digits[::-1]
+
+
+# found this code at https://stackoverflow.com/questions/2267362/how-to-convert-an-integer-to-a-string-in-any-base
+def baseToDecimal(b, n):
+    num = 0
+    for i, d in enumerate(n):
+        num += d * b ** (len(n)-i) 
+    return num
 
 
 def incInBase(b, n):
