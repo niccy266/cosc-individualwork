@@ -150,9 +150,9 @@ public class NicoGeoInput3 {
 
         if (signed && cardinal)
             return;
-        spaceBetweenCardinal = cardinal &&
+        //spaceBetweenCardinal = cardinal && 
 
-                store(coords, sc.nextLine());
+        store(coords, sc.nextLine());
         return;
     }
 
