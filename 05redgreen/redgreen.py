@@ -1,11 +1,10 @@
 import sys
 
-
 EMPTY = 0
 GREEN = 1
 RED = -1
 
-cache = [GREEN] + [EMPTY] * 9999999
+cache = [0, GREEN] + [EMPTY] * 9999999
 
 def main():
     
@@ -21,31 +20,40 @@ def main():
             if a < 1 or b < 1:
                 raise
 
+            print(a, b, end=" ")
+
             for n in range(a, b + 1):
-                print(isRed(n))
+                print("R" if colour(n) == RED else "G", end=" ")
+            print()
         except:
             print("Bad input: " + line, end="")
             continue
 
 
-def isRed(n):
-    print(n)
+def colour(n):
+    #print(n)
     if cache[n] == RED: 
-        return True
+        return RED
     if cache[n] == GREEN: 
-        return False
-
+        return GREEN
 
     greenMinRed = 0
-    divisor = 1
-    while divisor <= n//2:
-        greenMinRed += isRed(n//divisor)
+    closeFactors = [1] # every number has 1 as a near factor
+    for divisor in range(2, n//2 + 1):
+        closeFactors.append(n//divisor)
+    closeFactors = list(set(closeFactors)) #remove duplicates
 
-    if greenMinRed > 0: 
+    #print("\n", closeFactors, end=" ")
+    for f in closeFactors:
+        greenMinRed += colour(f)
+
+    if greenMinRed > 0: # had more green than red
         cache[n] = RED
+        #print(n, "was red")
         return RED
     else: 
         cache[n] = GREEN
+        #print(n, "was green")
         return GREEN
 
 
