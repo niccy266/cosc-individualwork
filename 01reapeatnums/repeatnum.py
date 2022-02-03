@@ -19,13 +19,13 @@ def main():
 
             mode = tokens[0]
             if mode == "A":
-                print(a_func(a, b))
+                print(*a_func(a, b))
             elif mode == "B":
                 print(b_func(a, b))
             else:
                 raise
         except:
-            print("Bad line: " + line)
+            print("Bad line: " + line, end="")
             continue
 
 
@@ -39,7 +39,7 @@ def a_func(b, n):
         # if input number was bigger than largest num without repeats
         # by a large margin, then that number is the start of
         # an infinite set of numbers with repeats
-        return upper_decimal
+        return upper_decimal, n - upper_decimal
 
     return a_search(b, n // b, n)
 
@@ -58,8 +58,15 @@ def a_search(b, s, e):
                 long = curr
             curr = s + 1
         s += 1
+        
+    # has to check again in case the last run never ended
+    curr_l = s - curr
+    if curr_l > long_l:
+        long_l = curr_l
+        long = curr
+
     #print(long, long_l, numberToBase(long, b))
-    return long
+    return long, long_l
 
 
 

@@ -1,0 +1,6 @@
+Hello world
+A 10 30
+Why not
+B 10 10000
+A 5 625
+X What?
