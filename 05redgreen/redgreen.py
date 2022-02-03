@@ -29,15 +29,17 @@ def main():
 
 
 def isRed(n):
+    print(n)
     if cache[n] == RED: 
         return True
     if cache[n] == GREEN: 
         return False
 
+
     greenMinRed = 0
     divisor = 1
-    while divisor <= n/2:
-        greenMinRed += isRed(n/2)
+    while divisor <= n//2:
+        greenMinRed += isRed(n//divisor)
 
     if greenMinRed > 0: 
         cache[n] = RED
