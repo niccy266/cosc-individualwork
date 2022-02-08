@@ -3,7 +3,6 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Toolkit;
-
 import javax.swing.SwingUtilities;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -17,46 +16,37 @@ public class Quilt extends JPanel {
 
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
-
         Queue<int[]> q = new LinkedList<int[]>();
 
         int x = getWidth() / 2, y = getHeight() / 2;
-        q.add(new int[] { 0, x, y });
-        int[] s;
+        int[] s = { 0, x, y };
+        q.add(s);
+        int[] item;
+        int r;
 
         while (!q.isEmpty()) {
-            s = q.remove();
-            x = s[1];
-            y = s[2];
+            item = q.remove();
+            x = item[1];
+            y = item[2];
 
-            int r = s[0] / 2;
+            s = squares[item[0]];
+
+            r = s[0] / 2;
             g.setColor(new Color(s[1], s[2], s[3]));
             g.fillRect(x - r, y - r, r * 2, r * 2);
 
             // don't draw corners if end is reached
-            if (s[0]++ >= squares.length) {
+            if (++item[0] >= squares.length) {
                 continue;
+            } else {
+                // draw squares on the corners
+                q.add(new int[] { item[0], x - r, y - r });
+                q.add(new int[] { item[0], x + r, y - r });
+                q.add(new int[] { item[0], x - r, y + r });
+                q.add(new int[] { item[0], x + r, y + r });
             }
-            // draw squares on the corners
-            q.add(new int[] { s[0], x - r, y - r });
-            q.add(new int[] { s[0], x + r, y - r });
-            q.add(new int[] { s[0], x - r, y + r });
-            q.add(new int[] { s[0], x + r, y + r });
         }
     }
-
-    // void recurseSquares(Graphics g, Point center, int i) {
-    // if (i >= squares.length) {
-    // return;
-    // }
-
-    // int[] s = squares[i++];
-    // int radius = s[0] / 2;
-    // g.setColor(new Color(s[1], s[2], s[3]));
-    // g.fillRect(center.x - radius, center.y - radius, radius * 2, radius * 2);
-
-    // recurseSquares(g, center.translate(radius, radius)), i);
-    // }
 
     public static void main(String[] args) {
         String line;
@@ -68,54 +58,64 @@ public class Quilt extends JPanel {
 
         // cleaning data
         while (sc.hasNextLine()) {
+            // System.out.println("cleaning input");
             line = sc.nextLine();
             lineParser = new Scanner(line);
             try {
-                lineParser.nextInt();
-                for (int k = 0; k < 3; k++) {
+                lineParser.nextFloat();
+                for (int k = 1; k < 3; k++) {
                     int c = lineParser.nextInt();
                     if (c < 0 || c > 255) {
                         throw new NumberFormatException();
                     }
                 }
                 if (i >= lines.length) {
-                    doubleArraySize(lines);
+                    lines = doubleArraySize(lines);
                 }
                 lines[i++] = line;
                 l++;
-            } catch (NumberFormatException e) {
-                System.err.println("bad input on line " + l++);
+            } catch (Exception e) {
+                System.err.println("bad input on line " + l++ + e.getMessage());
             }
             lineParser.close();
         }
         sc.close();
 
-        int totalScale = 0;
+        // System.out.println("parsing input");
+        float totalScale = 0;
         // parsing clean data
-        squares = new int[i][4]; // i is the index of the last square
+        squares = new int[i][4]; // i is the index of the last square + 1
+        float[] scales = new float[i];
         for (i = 0; i < squares.length; i++) {
+
+            // System.out.println(lines[i]);
             lineParser = new Scanner(lines[i]);
-            for (int k = 0; k < 3; k++) {
+
+            scales[i] = lineParser.nextFloat();
+            totalScale += scales[i];
+
+            for (int k = 1; k < 4; k++) {
                 squares[i][k] = lineParser.nextInt();
             }
-            totalScale += squares[i][0];
+
+            // System.out.println(Arrays.toString(squares[i]));
         }
 
         // make window a resonable size
         Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
-        int w = screenSize.width / 2, h = screenSize.height / 2;
-        int size = (w > h) ? w : h;
+        int w = screenSize.width, h = screenSize.height;
+        int size = (w < h) ? w * 2 / 3 : h * 2 / 3;
 
-        int scale = size / totalScale;
-        for (int[] square : squares) {
-            square[0] *= scale;
+        // System.out.println("scaling squares");
+        float scale = size / totalScale;
+        for (i = 0; i < squares.length; i++) {
+            squares[i][0] = (int) (scales[i] * scale);
         }
 
         SwingUtilities.invokeLater(() -> {
             var panel = new Quilt();
-            panel.setBackground(Color.GREEN.darker());
             var frame = new JFrame("A simple graphics program");
-            frame.setSize(size, size);
+            frame.setSize(size + 30, size + 50); // idk why but these numbers work
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.getContentPane().add(panel, BorderLayout.CENTER);
             frame.setVisible(true);
