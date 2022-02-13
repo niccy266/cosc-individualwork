@@ -3,6 +3,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 //import org.apache.commons.lang3.ArrayUtils;
 
+import javax.print.DocFlavor.STRING;
+
 public class NicoGeoInput4 {
 
     public static final char dg = '\u00B0';
@@ -235,12 +237,11 @@ public class NicoGeoInput4 {
         signed = false;
         cardinal = false;
         coord = NONE;
-        float val = NONE;
-        float deg = NONE;
+        int deg = NONE;
         int min = NONE;
         float sec = NONE;
         char[] dmsLetters = { 'd', 'm', 's' };
-        char[] dmsSymbols = { dg, '\"', '\'' };
+        char[] dmsSymbols = { dg, '\'', '\"' };
         axis = NONE;
         sign = POS;
         coords = new float[] { NONE, NONE };
@@ -249,50 +250,60 @@ public class NicoGeoInput4 {
         Matcher m;
         String matchSign = "";
 
-        if (line.matches("[+-]?[0-9]+d(.*)")) {
+        if (line.matches("[0-9]+d(.*)")) {
             matchSign = "([dms])";
         }
-        if (line.matches("[+-]?[0-9]+\u00B0(.*)")) {
+        if (line.matches("[0-9]+\u00B0(.*)")) {
             if (matchSign != "")
                 return false;
-            matchSign = "([\u00B0\"\'])";
+            matchSign = "([\u00B0\'\"])";
         }
 
-        m = Pattern.compile("([0-9]+)\\s*" + matchSign).matcher(t);
+        m = Pattern.compile("([0-9]+)\\s*(" + matchSign + ")\\s?([NSEW]?)").matcher(t);
 
         while (m.find()) {
             float n = Float.parseFloat(m.group(1));
-            System.out.println(t);
-            // t = removeComma(t);
+            char unit = m.group(2).charAt(0);
 
-            sign = checkSign();
-            if (t.strip().length() == 0)
-                continue;
+            t = m.group(2);
             if (!checkCardinal()) {
-                sc.close();
                 return false;
             }
-            if (signed && cardinal) {
-                sc.close();
-                return false;
-            }
-            if (t.strip().length() == 0)
-                continue;
 
-            // can't mix and match symbols and letters
-            if (t.matches("(.*)[dms](.*)")) {
-                if (dmsSign == SYMBOLS) {
-                    sc.close();
-                    return false;
-                }
-                dmsSign = LETTERS;
-            }
-            if (t.matches("(.*)[\u00B0\"\'](.*)")) {
-                if (dmsSign == LETTERS) {
-                    sc.close();
-                    return false;
-                }
-                dmsSign = SYMBOLS;
+            switch (unit) {
+                case dg:
+                case 'd':
+                    if (deg != NONE) {
+                        coord = degToDecimal(deg, min, sec);
+                    }
+                    if ((int) n == n) {
+                        deg = (int) n;
+                        continue;
+                    } else {
+                        return false; // float given for degrees
+                    }
+                case '\'':
+                case 'm':
+                    if (deg == NONE)
+                        return false; // recieved mins before degrees
+                    if (min != NONE) {
+                        coord = degToDecimal(deg, min, sec);
+                    }
+                    if ((int) n == n) {
+                        min = (int) n;
+                        continue;
+                    } else {
+                        return false; // float given for minutes
+                    }
+
+                case '\"':
+                case 's':
+                    if (min == NONE)
+                        return false; // recieved secs before mins
+                    if (sec != NONE) {
+                        coord = degToDecimal(deg, min, sec);
+                    }
+                    sec = n;
             }
 
             if (coords[LAT] != NONE && coords[LON] != NONE) {
@@ -306,7 +317,6 @@ public class NicoGeoInput4 {
                         val = Float.parseFloat(t);
                         continue;
                     } else {
-                        sc.close();
                         return false;
                     }
                 }
@@ -322,7 +332,6 @@ public class NicoGeoInput4 {
 
                 String[] vals = t.split("[dms\u00B0\"\']");
                 if (vals.length > 3) {
-                    sc.close();
                     return false; // too many numbers for dms format
                 }
                 if (vals.length == 1) {
@@ -414,7 +423,7 @@ public class NicoGeoInput4 {
     }
 
     public static boolean validDecimalFormat(String c) {
-        String num = "[+-]?([0-9])*" + dg + "?(\\s?[NSEW])?";
+        String num = "[+-]?([0-9])*(.([0-9])+)?" + dg + "?(\\s?[NSEW])?";
         String sep = ",?\\s?";
         String end = "(\\s(.)*)?";
         return c.matches(num + sep + num + end);
@@ -428,5 +437,15 @@ public class NicoGeoInput4 {
         float absLat = (lat < 0) ? -lat : lat;
         float absLon = (lon < 0) ? -lon : lon;
         return absLat <= 90 && absLon <= 180;
+    }
+
+    public static float degToDecimal(int deg, int min, float sec) {
+        float c = 0;
+        c += deg;
+        if (min != NONE)
+            c += min / 60.0;
+        if (sec != NONE)
+            c += sec / 3600;
+        return c;
     }
 }
