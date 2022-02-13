@@ -1,23 +1,25 @@
-package whereintheworld;
-
-import java.lang.Character.Subset;
 import java.util.*;
 //import org.apache.commons.lang3.ArrayUtils;
 
 public class NicoGeoInput2 {
 
-    public static final String dg = "\u00B0";
+    public static final char dg = '\u00B0';
     public static final int NONE = -1;
     public static final int LAT = 0;
     public static final int LON = 1;
     public static final int POS = 1;
     public static final int NEG = -1;
+    public static final int LETTERS = 0;
+    public static final int SYMBOLS = 1;
+    public static final int DECIMAL = 1;
+    public static final int DEGREE = -1;
     public static float coord = NONE;
     public static boolean signed = false;
     public static boolean cardinal = false;
     public static int axis = NONE;
     public static int sign = POS;
     public static float[] coords;
+    public static String label;
     public static String t; // current token being processed
 
     /*
@@ -37,29 +39,55 @@ public class NicoGeoInput2 {
 
     public static void main(String[] args) {
         Scanner scan = new Scanner(System.in);
-
+        String line;
         int count = 0;
         while (scan.hasNextLine()) {
-            parse(scan.nextLine(), count++);
+            line = scan.nextLine();
+            if(parse(line, count++)) {
+                store(coords, label);
+            } else {
+                System.out.println("Unable to process: " + line);
+            }
         }
-
         scan.close();
     }
 
-    public static boolean startsWithNumber(String c) {
-        return c.matches("[+-]?[0-9](.*)");
+    public static boolean parse(String line, int count) {
+        if (line.charAt(0) == '#') {
+            return false; // found a comment
+        }
+        if (!startsWithNumber(line)) {
+            return false; // not in either format
+        }
+
+        if (validDegreesFormat(line)) {
+            System.out.println("Parsing as degrees");
+            return tryParseDegree(line);
+        } else if (validDecimalFormat(line)) {
+            System.out.println("Parsing as decimal");
+            return tryParseDecimal(line);
+        } else {
+            return false; // unrecognized format
+        }
     }
 
-    public static boolean isCardinal(char c) {
-        return Character.toString(c).matches("(.*)[NSEW](.*)");
+    public static void checkSign() {
+        char s = t.charAt(0);
+        if (isSigned(s)) {
+            signed = true;
+
+            if (s == '-') {
+                sign = NEG;
+            }
+
+            t = t.substring(1); // remove sign so the number can be parsed
+        }
+        return;
     }
 
     public static boolean checkCardinal() {
-        char c = t.charAt(t.length());
+        char c = t.strip().charAt(t.length() - 1);
         if (isCardinal(c)) {
-            if (signed) {
-                return false; // used +/- as well as cardinal letters
-            }
             cardinal = true;
 
             // if a direction is already staged
@@ -70,7 +98,6 @@ public class NicoGeoInput2 {
             // stage the direction
             sign = cardToCoord(c);
             axis = latOrLon(c);
-
             // checks if the staged axis already has a value
             if (coords[axis] != NONE) {
                 return false; // given two values for the same axis
@@ -93,43 +120,200 @@ public class NicoGeoInput2 {
         return true;
     }
 
-    public static boolean isSigned(char c) {
-        return Character.toString(c).substring(0, 1).matches("[+-]");
-    }
+    // public static String coordToStr(float n) {
+    // String num = Integer.toString(Math.round(n*1000000));
+    // int decPoint = num.length() - 6
+    // return num.substring(0, decPoint) + "." + num.substring(decPoint);
+    // }
 
-    public static boolean checkSign() {
-        char s = t.charAt(0);
-        if (isSigned(s)) {
-            if (cardinal) {
-                return false; // used +/- as well as cardinal letters
-            }
-            signed = true;
+    /**
+     * Tries to parse a line of input as coordinates in decimal format.
+     * Tries to match input with decimal format coordinates, eg, 80, 170.
+     * Returns if the the requirements for the format ever aren't met.
+     * If the data is parsed succesfully, the coordinates and label
+     * are passed to the output file using store()
+     * 
+     * @param line  the line of input to parse in decimal format
+     * @param count number of input line in system.in for reporting bad data
+     */
+    public static boolean tryParseDecimal(String line) {
+        Scanner sc = new Scanner(line)
+        sc.useDelimiter("[\\s*,]*");
+        signed = false;
+        cardinal = false;
+        coord = NONE;
+        axis = NONE;
+        sign = POS;
+        coords = new float[] { NONE, NONE };
 
-            if (s == '-') {
-                sign = NEG;
+        while (sc.hasNext()) {
+            t = sc.next();
+            t = removeComma(t.strip());
+
+            checkSign();
+            if (!checkCardinal()) {
+                sc.close();
+                return false;
             }
-            t = t.substring(1); // remove sign so the number can be parsed
+            if(signed && cardinal) {
+                sc.close();
+                return false;
+            }
+
+            if (coords[LAT] != NONE && coords[LON] != NONE) {
+                // break from loop if we have a coordinate for both axes
+                break;
+            }
+
+            if (isNum(t)) {
+                // if another value is already staged but not saved
+                if (coord != NONE) {
+                    coords[LAT] = coord;
+                    coords[LON] = Float.parseFloat(t);
+                    break;
+                }
+    
+                // otherwise stage the next value
+                coord = sign * Float.parseFloat(t);
+    
+                if (cardinal) {
+                    // if there was a cardinal letter adjacent to the number
+                    if (axis != NONE) {
+                        coords[axis] = sign * coord;
+    
+                        // ready for next coordinate
+                        coord = NONE;
+                        axis = NONE;
+                        sign = POS;
+                    } // else no axis given now but next token could be a cardinal letter
+                }
+            }
         }
+
+        sc.close();
+        label = sc.nextLine();
         return true;
     }
 
-    public static void parse(String line, int count) {
-        if (line.charAt(0) == '#') {
-            return; // found a comment
-        }
-        if (!startsWithNumber(line)) {
-            return; // not in either format // broke rule 6
+    // public static String coordToStr(float n) {
+    // String num = Integer.toString(Math.round(n*1000000));
+    // int decPoint = num.length() - 6
+    // return num.substring(0, decPoint) + "." + num.substring(decPoint);
+    // }
+
+    /**
+     * Tries to parse a line of input as coordinates in decimal format.
+     * Tries to match input with decimal format coordinates, eg, 80, 170.
+     * Returns if the the requirements for the format ever aren't met.
+     * If the data is parsed succesfully, the coordinates and label
+     * are passed to the output file using store()
+     * 
+     * @param line  the line of input to parse in decimal format
+     */
+    public static boolean tryParseDegree(String line) {
+        signed = false;
+        cardinal = false;
+        coord = NONE;
+        float val = NONE;
+        int deg = NONE;
+        int min = NONE;
+        float sec = NONE;
+        int dmsSign = NONE;
+        char[] dmsLetters = {'d', 'm', 's'};
+        char[] dmsSymbols = {dg, '\"', '\''};
+        axis = NONE;
+        sign = POS;
+        coords = new float[] { NONE, NONE };
+
+        Scanner sc = new Scanner(line).useDelimiter("[\\s*,]*");
+
+        while (sc.hasNext()) {
+            t = sc.next();
+            t = removeComma(t);
+
+            checkSign();
+            if (!checkCardinal()) {
+                sc.close();
+                return false;
+            }
+            if(signed && cardinal) {
+                sc.close();
+                return false;
+            }
+
+            //can't mix and match symbols and letters
+            if(t.matches("(.*)[dms](.*)")) {
+                if(dmsSign == SYMBOLS) 
+                    return false;
+                dmsSign = LETTERS;
+            }
+            if(t.matches("(.*)[\u00B0\"\'](.*)")){
+                if(dmsSign == LETTERS) 
+                    return false;
+                dmsSign = SYMBOLS;
+            }
+
+            if (coords[LAT] != NONE && coords[LON] != NONE) {
+                // break from loop if we have a coordinate for both axes
+                break;
+            }
+
+            if (startsWithNumber(t)) {
+                String[] vals = t.split("[dms\u00B0\"\']");
+                if(vals.length > 3) {
+                    return false; 
+                }
+                if(t.matches("(.*)[dms\u00B0\"\'](.*)"));
+
+                // if another value is already staged but not saved
+                if (coord != NONE) {
+                    coords[LAT] = coord;
+                    coords[LON] = Float.parseFloat(t);
+                    break;
+                }
+    
+                // otherwise stage the next value
+                coord = sign * Float.parseFloat(t);
+    
+                if (cardinal) {
+                    // if there was a cardinal letter adjacent to the number
+                    if (axis != NONE) {
+                        coords[axis] = sign * coord;
+    
+                        // ready for next coordinate
+                        coord = NONE;
+                        axis = NONE;
+                        sign = POS;
+                    } // else no axis given now but next token could be a cardinal letter
+                }
+            }
         }
 
-        if (validDegreesFormat(line)) {
-            tryParse(DEGREE);
-            return;
-        } else if (validDecimalFormat(line)) {
-            tryParse(DECIMAL);
-            return;
-        } else {
-            return; // unrecognized format // broke rule 6
-        }
+        sc.close();
+        label = sc.nextLine();
+        return true;
+    }
+
+    public static void store(float[] coords, String label) {
+        System.out.print("[ " + Float.toString(coords[LAT]) +
+                ", " + Float.toString(coords[LON]) + " ]" + label);
+        return;
+    }
+
+    public static boolean startsWithNumber(String c) {
+        return c.matches("[+-]?[0-9](.*)");
+    }
+
+    public static String removeComma(String c) {
+        return c.charAt(c.length() - 1) == ',' ? c.substring(0, c.length() - 2) : c;
+    }
+
+    public static boolean isCardinal(char c) {
+        return Character.toString(c).matches("(.*)[NSEW](.*)");
+    }
+
+    public static boolean isSigned(char c) {
+        return Character.toString(c).substring(0, 1).matches("[+-]");
     }
 
     public static boolean isNum(String n) {
@@ -155,263 +339,24 @@ public class NicoGeoInput2 {
         }
     }
 
-    public static String removeComma(String c) {
-        return c.charAt(c.length()) == ',' ? c.substring(0, c.length() - 1) : c;
-    }
-
     public static boolean validDegreesFormat(String c) {
-        return c.matches("[+-]?([0-9]*)[d\u00B0](\s?([0-5]?[0-9]|60)[m\']" +
+        return c.matches("[+-]?([0-9])*[d\u00B0](\s?([0-5]?[0-9]|60)[m\']" +
                 "(\s?([0-9][0-9]*)(.([0-9]*))?[s\"])?)?[NSEW]?,?(.)*");
     }
 
     public static boolean validDecimalFormat(String c) {
-        return c.matches("[+-]?([0-9]*)[\s?[NSEW]]?,?\s?" +
-                "[+-]?([0-9]*)[\s?[NSEW]]?[\s(.)*]?");
+        //"[+-]?([0-9])*"
+        return c.matches("[+-]?([0-9])*(\\s?[NSEW]])?,?\\s?" +
+                "[+-]?([0-9]*)[\\s?[NSEW]]?[\\s(.)*]?");
     }
 
     public static int latOrLon(char c) {
         return c == 'N' || c == 'S' ? LAT : LON;
     }
 
-    // public static String coordToStr(float n) {
-    // String num = Integer.toString(Math.round(n*1000000));
-    // int decPoint = num.length() - 6
-    // return num.substring(0, decPoint) + "." + num.substring(decPoint);
-    // }
-
-    /**
-     * Tries to parse a line of input as coordinates in decimal format.
-     * Tries to match input with decimal format coordinates, eg, 80, 170.
-     * Returns if the the requirements for the format ever aren't met.
-     * If the data is parsed succesfully, the coordinates and label
-     * are passed to the output file using store()
-     * 
-     * @param line  the line of input to parse in decimal format
-     * @param count number of input line in system.in for reporting bad data
-     */
-    public static void tryParseDecimal(String line, int count) {
-        Scanner sc = new Scanner(line);
-        signed = false;
-        cardinal = false;
-        coord = NONE;
-        axis = NONE;
-        sign = POS;
-        coords = new float[] { NONE, NONE };
-
-        while (sc.hasNext()) {
-
-            t = sc.next();
-            removeComma(t);
-
-            if (!checkSign()) {
-                sc.close();
-                return;
-            }
-            if (!checkCardinal()) {
-                sc.close();
-                return;
-            }
-
-            if (coords[LAT] != NONE && coords[LON] != NONE) {
-                // break from loop if we have a coordinate for both axes
-                break;
-            }
-
-            parseDecimal();
-        }
-
-        sc.close();
-
-        store(coords, sc.nextLine());
-        return;
+    public static boolean areCoordsValid(float lat, float lon) {
+        float absLat = (lat < 0) ? -lat : lat;
+        float absLon = (lon < 0) ? -lon : lon;
+        return absLat <= 90 && absLon <= 180;
     }
-
-    public static boolean parseDecimal() {
-        if (isNum(t)) {
-            // if another value is already staged but not saved
-            if (coord != NONE) {
-                coords[LAT] = coord;
-                coords[LON] = Float.parseFloat(t);
-                return true;
-            }
-
-            // otherwise stage the next value
-            coord = sign * Float.parseFloat(t);
-
-            if (cardinal) {
-                // if there was a cardinal letter adjacent to the number
-                if (axis != NONE) {
-                    coords[axis] = sign * coord;
-
-                    // ready for next coordinate
-                    coord = NONE;
-                    axis = NONE;
-                    sign = POS;
-                } // else no axis given now but next token could be a cardinal letter
-            }
-            return true;
-        }
-        return false;
-    }
-
-    public static byte validDegreesLatitude(String c) {
-
-        String[] dmsNums = stripDMS(c); // extract numbers
-
-        if (dmsNums.length > 3) {
-            return 4; // error code for too many numbers
-        }
-
-        try {
-            int absLatDeg = Integer.parseInt(dmsNums[0]);
-            int absLatMin = 0;
-            int absLatSec = 0;
-            if (dmsNums.length >= 2) {
-                absLatMin = Integer.parseInt(dmsNums[1]);
-                if (dmsNums.length == 3) {
-                    absLatMin = Integer.parseInt(dmsNums[1]);
-                }
-            }
-            if (absLat > 90) {
-                return 3; // error code for latitude out of bounds
-            }
-        } catch (NumberFormatException e) {
-            return 2; // error code for latitude isn't a number
-        }
-        for (int i = 0; i < dmsNums.length; i++) {
-
-        }
-
-        // try to parse absolute latitude
-
-        return 0; // return 0 for valid latitude
-    }
-
-    public static String[] stripDMS(String c) {
-        // this code reduces token to the absolute value of latitude
-        if (c.substring(0, 1).matches("[+-]")) {
-            if (c.substring(c.length() - 1).matches("[NS]")) {
-                return 1; // error code for using signed coordinate and a cardinal letter
-            }
-            c = c.substring(1); // remove sign so number is absolute value
-        } else {
-            if (c.substring(c.length() - 1).matches("[NS]")) {
-                c = c.substring(0, c.length()); // remove the cardinal letter so only positive number is left
-            }
-        }
-
-        return c.split("[\u00B0\'\"]");
-    }
-
-    // public static String coordToStr(float n) {
-    // String num = Integer.toString(Math.round(n*1000000));
-    // int decPoint = num.length() - 6
-    // return num.substring(0, decPoint) + "." + num.substring(decPoint);
-    // }
-
-    /**
-     * Tries to parse a line of input as coordinates in decimal format.
-     * Tries to match input with decimal format coordinates, eg, 80, 170.
-     * Returns if the the requirements for the format ever aren't met.
-     * If the data is parsed succesfully, the coordinates and label
-     * are passed to the output file using store()
-     * 
-     * @param line  the line of input to parse in decimal format
-     * @param count number of input line in system.in for reporting bad data
-     */
-    public static void parseDegree(String line, int count) {
-        // if the imput matches the decimal format, it should be
-        // stripped to just the number by this point
-        if (isNum(t)) {
-            // if another value is already staged but not saved
-            if (coord != NONE) {
-                coords[LAT] = coord;
-                coords[LON] = Float.parseFloat(t);
-                // now we have both coords so exit the loop
-                break;
-            }
-
-            // otherwise stage the next value
-            coord = sign * Float.parseFloat(t);
-
-            if (cardinal) {
-                // if there was a cardinal letter adjacent to the number
-                if (axis != NONE) {
-                    coords[axis] = sign * coord;
-                    if (coords[1 - axis] != NONE) {
-                        // break from loop if we have a coordinate for both axes
-                        break;
-                    }
-
-                    // ready for next coordinate
-                    coord = NONE;
-                    axis = NONE;
-                    sign = 1;
-                } // else no axis given now but next token could be a cardinal letter
-            }
-        }
-    }
-
-    public static byte validDecimalLatitude(String c) {
-        // this code reduces token to the absolute value of latitude
-        if (c.substring(0, 1).matches("[+-]")) {
-            if (c.substring(c.length() - 1).matches("[NS]")) {
-                return 1; // error code for using signed coordinate and a cardinal letter
-            }
-            c = c.substring(1); // remove sign so number is absolute value
-        } else {
-            if (c.substring(c.length() - 1).matches("[NS]")) {
-                c = c.substring(0, c.length()); // remove the cardinal letter so only positive number is left
-            }
-        }
-
-        // try to parse absolute latitude
-        try {
-            int absLat = Integer.parseInt(c);
-            if (absLat > 90) {
-                return 3; // error code for latitude out of bounds
-            }
-        } catch (NumberFormatException e) {
-            return 2; // error code for latitude isn't a number
-        }
-
-        return 0; // return 0 for valid latitude
-    }
-
-    public static byte validDecimalLongitude(String c) {
-        // this code reduces token to the absolute value of longitude
-        if (c.substring(0, 1).matches("[+-]")) {
-            if (c.substring(c.length() - 1).matches("[EW]")) {
-                return 1; // error code for using signed coordinate and a cardinal letter
-            }
-            c = c.substring(1); // remove sign so number is absolute value
-        } else {
-            if (c.substring(c.length() - 1).matches("[EW]")) {
-                c = c.substring(0, c.length()); // remove the cardinal letter so only positive number is left
-            }
-        }
-
-        // try to parse absolute longitude
-        try {
-            int absLat = Integer.parseInt(c);
-            if (absLat > 180) {
-                return 3; // error code for longitude out of bounds
-            }
-        } catch (NumberFormatException e) {
-            return 2; // error code for longitude isn't a number
-        }
-
-        return 0; // return 0 for valid longitude
-    }
-
-    public static void reject(int l, String m) {
-        System.err.println("rejected line " + l + ": " + m);
-    }
-
-    public static void store(float[] coords, String label) {
-        System.out.print("[ " + Float.toString(coords[LAT]) +
-                ", " + Float.toString(coords[LON]) + " ]" + label);
-        return;
-    }
-
 }
