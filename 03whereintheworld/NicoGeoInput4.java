@@ -3,7 +3,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 //import org.apache.commons.lang3.ArrayUtils;
 
-public class NicoGeoInput2 {
+public class NicoGeoInput4 {
 
     public static final char dg = '\u00B0';
     public static final int NONE = -1;
@@ -232,8 +232,6 @@ public class NicoGeoInput2 {
      * @param line the line of input to parse in decimal format
      */
     public static boolean tryParseDegree(String line) {
-        Scanner sc = new Scanner(line);
-        sc.useDelimiter("[\\s*,]*");
         signed = false;
         cardinal = false;
         coord = NONE;
@@ -241,7 +239,6 @@ public class NicoGeoInput2 {
         float deg = NONE;
         int min = NONE;
         float sec = NONE;
-        int dmsSign = NONE;
         char[] dmsLetters = { 'd', 'm', 's' };
         char[] dmsSymbols = { dg, '\"', '\'' };
         axis = NONE;
@@ -250,10 +247,21 @@ public class NicoGeoInput2 {
         label = "";
 
         Matcher m;
-        String matchSign;
+        String matchSign = "";
 
-        while (sc.hasNext()) {
-            t = sc.next();
+        if (line.matches("[+-]?[0-9]+d(.*)")) {
+            matchSign = "([dms])";
+        }
+        if (line.matches("[+-]?[0-9]+\u00B0(.*)")) {
+            if (matchSign != "")
+                return false;
+            matchSign = "([\u00B0\"\'])";
+        }
+
+        m = Pattern.compile("([0-9]+)\\s*" + matchSign).matcher(t);
+
+        while (m.find()) {
+            float n = Float.parseFloat(m.group(1));
             System.out.println(t);
             // t = removeComma(t);
 
@@ -287,11 +295,6 @@ public class NicoGeoInput2 {
                 dmsSign = SYMBOLS;
             }
 
-            if (m == null && dmsSign != NONE) {
-                matchSign = (dmsSign == LETTERS) ? "[dms]" : "[\u00B0\"\']";
-                m = Pattern.compile("[0-9]+" + matchSign).matcher(t);
-            }
-
             if (coords[LAT] != NONE && coords[LON] != NONE) {
                 // break from loop if we have a coordinate for both axes
                 break;
@@ -301,7 +304,9 @@ public class NicoGeoInput2 {
                 if (isNum(t)) {
                     if (val == NONE) {
                         val = Float.parseFloat(t);
+                        continue;
                     } else {
+                        sc.close();
                         return false;
                     }
                 }
@@ -350,10 +355,10 @@ public class NicoGeoInput2 {
             }
         }
 
-        if (sc.hasNextLine())
-            label = sc.nextLine();
+        label = line.replaceAll("[+-]?" + "([0-9])*[d\u00B0]" +
+                "(\s?([0-5]?[0-9]|60)[m\']" +
+                "(\\s?([0-9][0-9]*)(.([0-9]*))?[s\"])?)?[NSEW]?,?", "");
 
-        sc.close();
         return true;
 
     }
