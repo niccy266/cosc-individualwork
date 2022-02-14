@@ -105,7 +105,7 @@ public class NicolasGeo5 {
             }
 
             // stage the direction
-            sign = cardToCoord(c);
+            sign = cardToSign(c);
             axis = latOrLon(c);
             // checks if the staged axis already has a value
             if (coords[axis] != NONE) {

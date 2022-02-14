@@ -1,0 +1,103 @@
+{
+	"type": "FeatureCollection",
+	"features": [{
+		"type": "Feature",
+		"geometry": {
+			"type": "Point",
+			"coordinates": [-50.0, 180.0]
+		},
+		"properties": {
+			"label": "bob"
+		}
+	}, {
+		"type": "Feature",
+		"geometry": {
+			"type": "Point",
+			"coordinates": [-50.0, 40.0]
+		},
+		"properties": {
+			"label": ""
+		}
+	}, {
+		"type": "Feature",
+		"geometry": {
+			"type": "Point",
+			"coordinates": [-50.0, 40.0]
+		},
+		"properties": {
+			"label": ""
+		}
+	}, {
+		"type": "Feature",
+		"geometry": {
+			"type": "Point",
+			"coordinates": [-50.0, 40.0]
+		},
+		"properties": {
+			"label": ""
+		}
+	}, {
+		"type": "Feature",
+		"geometry": {
+			"type": "Point",
+			"coordinates": [50.0, -50.0]
+		},
+		"properties": {
+			"label": ""
+		}
+	}, {
+		"type": "Feature",
+		"geometry": {
+			"type": "Point",
+			"coordinates": [50.0, -40.0]
+		},
+		"properties": {
+			"label": ""
+		}
+	}, {
+		"type": "Feature",
+		"geometry": {
+			"type": "Point",
+			"coordinates": [30.0, 155.0]
+		},
+		"properties": {
+			"label": ""
+		}
+	}, {
+		"type": "Feature",
+		"geometry": {
+			"type": "Point",
+			"coordinates": [23.750555, -15.334167]
+		},
+		"properties": {
+			"label": ""
+		}
+	}, {
+		"type": "Feature",
+		"geometry": {
+			"type": "Point",
+			"coordinates": [50.0, 50.0]
+		},
+		"properties": {
+			"label": ""
+		}
+	}, {
+		"type": "Feature",
+		"geometry": {
+			"type": "Point",
+			"coordinates": [50.0, 50.0]
+		},
+		"properties": {
+			"label": ""
+		}
+	}, {
+		"type": "Feature",
+		"geometry": {
+			"type": "Point",
+			"coordinates": [-50.0, 40.999]
+		},
+		"properties": {
+			"label": "A wonderful, wonderful, wonderful place"
+		}
+	}]
+}
