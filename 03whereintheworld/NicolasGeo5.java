@@ -57,6 +57,7 @@ public class NicolasGeo5 {
     }
 
     public static boolean parse(String line, int count) {
+        System.out.println(line);
         if (line.charAt(0) == '#') {
             return false; // found a comment
         }
@@ -94,7 +95,7 @@ public class NicolasGeo5 {
 
     public static boolean checkCardinal() {
         char c = t.strip().charAt(t.length() - 1);
-        System.out.println(c);
+        // System.out.println(c);
         if (isCardinal(c)) {
             // System.out.println("cardinal");
             cardinal = true;
@@ -158,7 +159,7 @@ public class NicolasGeo5 {
 
         while (sc.hasNext()) {
             t = sc.next();
-            System.out.println(t);
+            // System.out.println(t);
             // t = removeComma(t.strip());
 
             sign = checkSign();
@@ -171,7 +172,7 @@ public class NicolasGeo5 {
                 sc.close();
                 return false;
             }
-            System.out.println(t);
+            // System.out.println(t);
 
             if (coords[LAT] != NONE && coords[LON] != NONE) {
                 // break from loop if we have a coordinate for both axes
@@ -182,16 +183,17 @@ public class NicolasGeo5 {
                 // if another value is already staged but not saved
                 if (coord != NONE) {
                     coords[LAT] = coord;
-                    coords[LON] = Float.parseFloat(t);
+                    coords[LON] = sign * Float.parseFloat(t);
                     break;
                 }
 
                 // otherwise stage the next value
-                coord = Float.parseFloat(t);
+                coord = sign * Float.parseFloat(t);
+                sign = POS;
 
                 if (axis != NONE) {
-                    System.out.println(sign + " " + axis + " " + coord);
-                    coords[axis] = sign * coord;
+                    // System.out.println(sign + " " + axis + " " + coord);
+                    coords[axis] = coord;
                     // check if both coords are here
                     if (coords[1 - axis] != NONE) {
                         break;
@@ -200,7 +202,6 @@ public class NicolasGeo5 {
                     // ready for next coordinate
                     coord = NONE;
                     axis = NONE;
-                    sign = POS;
 
                 } // else no axis given now but next token could be a cardinal letter
             }
@@ -234,14 +235,7 @@ public class NicolasGeo5 {
      * @param line the line of input to parse in decimal format
      */
     public static boolean tryParseDegree(String line) {
-        signed = false;
-        cardinal = false;
         coord = NONE;
-        int deg = NONE;
-        int min = NONE;
-        float sec = NONE;
-        char[] dmsLetters = { 'd', 'm', 's' };
-        char[] dmsSymbols = { dg, '\'', '\"' };
         axis = NONE;
         sign = POS;
         coords = new float[] { NONE, NONE };
@@ -251,125 +245,64 @@ public class NicolasGeo5 {
         String matchSign = "";
 
         if (line.matches("[0-9]+\\s?d(.*)")) {
-            matchSign = "([dms])";
+            matchSign = "dms";
         }
-        if (line.matches("[0-9]+\u00B0(.*)")) {
+
+        if (line.matches("[0-9]+\\s?\u00B0(.*)")) {
             if (matchSign != "")
                 return false; // can't use dms and dg " ' symbols
-            matchSign = "([\u00B0\'\"])";
+            matchSign = "\u00B0\'\"";
         }
 
-        m = Pattern.compile("([0-9]+)\\s*(" + matchSign + ")\\s?([NSEW]?)").matcher(t);
+        System.out.println(matchSign);
 
-        while (m.find()) {
-            float n = Float.parseFloat(m.group(1));
-            char unit = m.group(2).charAt(0);
+        String intReg = "([0-9]+)";
+        String floatReg = "([0-9]+(\\.[0-9]+)?)";
+        String degReg = intReg + matchSign.charAt(0) + "\\s?";
+        String minReg = intReg + matchSign.charAt(1) + "\\s?";
+        String secReg = floatReg + matchSign.charAt(2) + "\\s?";
 
-            t = m.group(2);
-            if (!checkCardinal()) {
-                return false;
-            }
+        String pattern = degReg + "(" + minReg + "(" + secReg + ")?)?" + "\\s?([NSWE])";
+        pattern = pattern + ",?\\s?" + pattern + "\\s?";
+        System.out.println(pattern);
+        m = Pattern.compile(pattern).matcher(t);
+        if (m.find()) {
 
-            switch (unit) {
-                case dg:
-                case 'd':
-                    if (deg != NONE) {
-                        coord = degToDecimal(deg, min, sec);
-                    }
-                    if ((int) n == n) {
-                        deg = (int) n;
-                        continue;
-                    } else {
-                        return false; // float given for degrees
-                    }
-                case '\'':
-                case 'm':
-                    if (deg == NONE)
-                        return false; // recieved mins before degrees
-                    if (min != NONE) {
-                        coord = degToDecimal(deg, min, sec);
-                    }
-                    if ((int) n == n) {
-                        min = (int) n;
-                        continue;
-                    } else {
-                        return false; // float given for minutes
-                    }
+            System.out.println(m.group());
+            int i = 0;
+            parseDegree(m, i);
+            parseDegree(m, i + 7);
 
-                case '\"':
-                case 's':
-                    if (min == NONE)
-                        return false; // recieved secs before mins
-                    if (sec != NONE) {
-                        coord = degToDecimal(deg, min, sec);
-                    }
-                    sec = n;
-            }
+            label = line.replaceAll(pattern, "");
+            return true;
 
-            if (coords[LAT] != NONE && coords[LON] != NONE) {
-                // break from loop if we have a coordinate for both axes
-                break;
-            }
-
-            if (startsWithNumber(t)) {
-                if (isNum(t)) {
-                    if (val == NONE) {
-                        val = Float.parseFloat(t);
-                        continue;
-                    } else {
-                        return false;
-                    }
-                }
-
-                while (m.find()) {
-                    String thing = m.group();
-                    char unit = thing.charAt(thing.length() - 1);
-                    thing = thing.substring(0, thing.length() - 2);
-
-                }
-
-                String[] units = new String[3];
-
-                String[] vals = t.split("[dms\u00B0\"\']");
-                if (vals.length > 3) {
-                    return false; // too many numbers for dms format
-                }
-                if (vals.length == 1) {
-                    String t;
-                }
-                if (t.matches("(.*)[dms\u00B0\"\'](.*)"))
-                    ;
-
-                // if another value is already staged but not saved
-                if (coord != NONE) {
-                    coords[LAT] = coord;
-                    coords[LON] = Float.parseFloat(t);
-                    break;
-                }
-
-                // otherwise stage the next value
-                coord = sign * Float.parseFloat(t);
-
-                if (cardinal) {
-                    // if there was a cardinal letter adjacent to the number
-                    if (axis != NONE) {
-                        coords[axis] = sign * coord;
-
-                        // ready for next coordinate
-                        coord = NONE;
-                        axis = NONE;
-                        sign = POS;
-                    } // else no axis given now but next token could be a cardinal letter
-                }
-            }
+        } else {
+            System.out.println(m.pattern());
+            System.out.println("regex failed");
+            return false;
         }
 
-        label = line.replaceAll("[+-]?" + "([0-9])*[d\u00B0]" +
-                "(\s?([0-5]?[0-9]|60)[m\']" +
-                "(\\s?([0-9][0-9]*)(.([0-9]*))?[s\"])?)?[NSEW]?,?", "");
+    }
 
+    public static boolean parseDegree(Matcher m, int i) {
+        int deg = Integer.parseInt(m.group(i + 1));
+        if (deg > 60)
+            return false;
+        int min = Integer.parseInt(m.group(i + 3));
+        if (min > 60)
+            return false;
+        float sec = Float.parseFloat(m.group(i + 5));
+        if (sec > 60)
+            return false;
+        char c = m.group(i + 7).charAt(0);
+
+        sign = cardToCoord(c);
+        axis = latOrLon(c);
+        coord = degToDecimal(deg, min, sec);
+        if (coords[axis] != NONE)
+            return false; // two values given for same axis
+        coords[axis] = coord * sign;
         return true;
-
     }
 
     public static void store(float[] coords, String label) {
@@ -418,12 +351,13 @@ public class NicolasGeo5 {
     }
 
     public static boolean validDegreesFormat(String c) {
-        return c.matches("[+-]?" + "([0-9])*[d\u00B0]" + "(\s?([0-5]?[0-9]|60)[m\']" +
-                "(\\s?([0-9][0-9]*)(.([0-9]*))?[s\"])?)?[NSEW]?,?(.)*");
+        String pattern = "[+-]?" + "([0-9])*[d\u00B0]" + "\\s?([0-5]?[0-9]|60)[m\']" +
+                "(\\s?([0-9][0-9]*)(\\.([0-9]*))?[s\"])?[NSEW]?,?(.)*";
+        return c.matches(pattern);
     }
 
     public static boolean validDecimalFormat(String c) {
-        String num = "[+-]?([0-9])*(.([0-9])+)?" + dg + "?(\\s?[NSEW])?";
+        String num = "[+-]?([0-9])*(\\.([0-9])+)?" + dg + "?(\\s?[NSEW])?";
         String sep = ",?\\s?";
         String end = "(\\s(.)*)?";
         return c.matches(num + sep + num + end);
