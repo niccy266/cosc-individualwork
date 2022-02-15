@@ -6,6 +6,13 @@
     "configurations": [
         {
             "type": "java",
+            "name": "Launch NicolasGeo5",
+            "request": "launch",
+            "mainClass": "NicolasGeo5",
+            "projectName": "cosc-individualwork_a8083046"
+        },
+        {
+            "type": "java",
             "name": "Launch Current File",
             "request": "launch",
             "mainClass": "${file}"

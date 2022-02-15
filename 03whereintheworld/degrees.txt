@@ -3,5 +3,6 @@
 50°00'N 60°W  pojef
 50°N 60°05'E  pojef
 50°N 60°00'00.0"W  pojef
-50°N 60°S
+50°N 60°S fail
 23 d 45 m 2 s N, 15 d 20 m 3 s W
+90 d 1 m 2 s N, 15 d 20 m 3 s W fail

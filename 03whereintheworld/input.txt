@@ -1,1 +1,7 @@
 50 S, 40 EA wonderful, wonderful, wonderful place
+23 d 45 m 2 s N, 15 d 20 m 3 s Wf 1
+90 d 1 m 2 s N, 15 d 20 m 3 s W 2
+50.5 d 1 m 2 s N, 15 d 20 m 3 s W 3
+50.5° N, 15.5° W 4
+90 180
+91 181
