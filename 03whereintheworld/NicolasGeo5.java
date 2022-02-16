@@ -298,6 +298,8 @@ public class NicolasGeo5 {
     }
 
     public static void store(float[] coords, String label) {
+        System.out.print(String.format("%.6f", coords[LAT]) + ", ");
+        System.out.println(String.format("%.6f", coords[LAT]));
         out.append("{\n" +
                 "\t\t\"type\": \"Feature\",\n" +
                 "\t\t\"geometry\": {\n" +

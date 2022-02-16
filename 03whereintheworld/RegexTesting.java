@@ -2,7 +2,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class NicolasGeo6 {
+public class RegexTesting {
 
     /*
      * Rules:
